@@ -1,0 +1,490 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Expense Form Integration Tests</title>
+  <style>
+    body { font-family: Arial, sans-serif; margin: 20px; background: #f4f4f4; }
+    .test-container { max-width: 800px; margin: 0 auto; background: #fff; padding: 20px; border-radius: 8px; }
+    .test-result { padding: 8px; margin: 4px 0; border-radius: 4px; }
+    .pass { background: #d4edda; color: #155724; border: 1px solid #c3e6cb; }
+    .fail { background: #f8d7da; color: #721c24; border: 1px solid #f5c6cb; }
+    .test-summary { font-weight: bold; margin: 20px 0; padding: 10px; border-radius: 4px; }
+    button { padding: 8px 16px; margin: 5px; border: none; border-radius: 4px; cursor: pointer; }
+    .run-tests { background: #007bff; color: white; }
+    .clear-data { background: #dc3545; color: white; }
+    .open-app { background: #28a745; color: white; }
+    
+    /* Copy main app styles for testing */
+    .container { max-width: 400px; margin: 20px auto; background: #fff; padding: 24px; border-radius: 8px; box-shadow: 0 2px 8px #ccc; }
+    h2 { text-align: center; }
+    form { margin-bottom: 16px; }
+    input[type="text"], input[type="number"], input[type="password"], input[type="date"], select {
+      width: 100%; padding: 8px; margin: 6px 0 12px 0; border: 1px solid #ccc; border-radius: 4px;
+    }
+    .error { color: #dc3545; font-size: 12px; margin-top: -8px; margin-bottom: 8px; display: none; }
+    .invalid { border-color: #dc3545 !important; }
+    .app-button { width: 100%; padding: 10px; background: #007bff; color: #fff; border: none; border-radius: 4px; cursor: pointer; }
+    .app-button:hover { background: #0056b3; }
+    ul { list-style: none; padding: 0; }
+    li { background: #f9f9f9; margin: 6px 0; padding: 8px; border-radius: 4px; display: flex; justify-content: space-between; }
+    .total { font-weight: bold; margin-top: 12px; }
+    .logout { background: #dc3545; margin-top: 12px; }
+  </style>
+</head>
+<body>
+  <div class="test-container">
+    <h1>Expense Tracker - Integration Tests</h1>
+    
+    <div>
+      <button class="run-tests" onclick="runAllTests()">Run All Tests</button>
+      <button class="clear-data" onclick="clearTestData()">Clear Test Data</button>
+      <button class="open-app" onclick="window.open('index-start.html', '_blank')">Open App in New Tab</button>
+    </div>
+    
+    <div id="test-results"></div>
+    <div id="test-summary"></div>
+    
+    <!-- Embedded test version of the app -->
+    <div id="test-app" style="border: 2px solid #ccc; margin: 20px 0; padding: 10px;">
+      <h3>Test Environment</h3>
+      
+      <div class="container" id="login-container">
+        <h2>Login</h2>
+        <form id="login-form">
+          <input type="text" id="username" placeholder="Username" required />
+          <input type="password" id="password" placeholder="Password" required />
+          <button type="submit" class="app-button">Login</button>
+        </form>
+        <div id="login-error" style="color: red; display: none;">Invalid credentials.</div>
+      </div>
+
+      <div class="container" id="app-container" style="display: none;">
+        <h2>Expense Tracker</h2>
+        <form id="expense-form">
+          <input type="text" id="desc" placeholder="Expense Description *" required />
+          <div class="error" id="desc-error">Please enter a description (minimum 2 characters)</div>
+          
+          <select id="category" required>
+            <option value="">Select Category *</option>
+            <option value="Food">Food & Dining</option>
+            <option value="Transport">Transportation</option>
+            <option value="Shopping">Shopping</option>
+            <option value="Bills">Bills & Utilities</option>
+            <option value="Entertainment">Entertainment</option>
+            <option value="Health">Healthcare</option>
+            <option value="Other">Other</option>
+          </select>
+          <div class="error" id="category-error">Please select a category</div>
+          
+          <input type="number" id="amount" placeholder="Amount *" min="0.01" step="0.01" required />
+          <div class="error" id="amount-error">Please enter a valid amount (minimum ₹0.01)</div>
+          
+          <input type="date" id="expense-date" required />
+          <div class="error" id="date-error">Please select a valid date</div>
+          
+          <button type="submit" class="app-button">Add Expense</button>
+        </form>
+        <ul id="expense-list"></ul>
+        <div class="total">Total: ₹<span id="total">0.00</span></div>
+        <button class="logout app-button" id="logout-btn">Logout</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // Copy the main app JavaScript functionality
+    const DEMO_USER = { username: "user", password: "pass" };
+    let testResults = [];
+
+    // Login logic
+    const loginForm = document.getElementById('login-form');
+    const loginContainer = document.getElementById('login-container');
+    const appContainer = document.getElementById('app-container');
+    const loginError = document.getElementById('login-error');
+
+    loginForm.addEventListener('submit', function(e) {
+      e.preventDefault();
+      const username = document.getElementById('username').value;
+      const password = document.getElementById('password').value;
+      if (username === DEMO_USER.username && password === DEMO_USER.password) {
+        loginContainer.style.display = 'none';
+        appContainer.style.display = 'block';
+        loginError.style.display = 'none';
+        loadExpenses();
+      } else {
+        loginError.style.display = 'block';
+      }
+    });
+
+    // Logout logic
+    document.getElementById('logout-btn').onclick = function() {
+      appContainer.style.display = 'none';
+      loginContainer.style.display = 'block';
+      loginForm.reset();
+    };
+
+    // Expense tracker logic
+    const expenseForm = document.getElementById('expense-form');
+    const expenseList = document.getElementById('expense-list');
+    const totalSpan = document.getElementById('total');
+
+    function setTodayDate() {
+      const today = new Date().toISOString().split('T')[0];
+      document.getElementById('expense-date').value = today;
+    }
+
+    function clearValidationErrors() {
+      ['desc', 'category', 'amount', 'expense-date'].forEach(field => {
+        document.getElementById(field).classList.remove('invalid');
+        const errorId = field === 'expense-date' ? 'date-error' : `${field}-error`;
+        document.getElementById(errorId).style.display = 'none';
+      });
+    }
+
+    function showValidationError(fieldId, show = true) {
+      const field = document.getElementById(fieldId);
+      const errorId = fieldId === 'expense-date' ? 'date-error' : `${fieldId}-error`;
+      const error = document.getElementById(errorId);
+      
+      if (show) {
+        field.classList.add('invalid');
+        error.style.display = 'block';
+      } else {
+        field.classList.remove('invalid');
+        error.style.display = 'none';
+      }
+    }
+
+    function validateExpenseForm() {
+      clearValidationErrors();
+      
+      const desc = document.getElementById('desc').value.trim();
+      const category = document.getElementById('category').value;
+      const amount = parseFloat(document.getElementById('amount').value);
+      const date = document.getElementById('expense-date').value;
+      
+      let isValid = true;
+      
+      if (!desc || desc.length < 2) {
+        showValidationError('desc');
+        isValid = false;
+      }
+      
+      if (!category) {
+        showValidationError('category');
+        isValid = false;
+      }
+      
+      if (!amount || amount <= 0 || amount < 0.01) {
+        showValidationError('amount');
+        isValid = false;
+      }
+      
+      if (!date) {
+        showValidationError('expense-date');
+        isValid = false;
+      } else {
+        const selectedDate = new Date(date);
+        const today = new Date();
+        const oneYearAgo = new Date();
+        oneYearAgo.setFullYear(today.getFullYear() - 1);
+        
+        if (selectedDate > today || selectedDate < oneYearAgo) {
+          document.getElementById('date-error').textContent = 'Date must be within the past year and not in the future';
+          showValidationError('expense-date');
+          isValid = false;
+        }
+      }
+      
+      return isValid;
+    }
+
+    function loadExpenses() {
+      const expenses = JSON.parse(localStorage.getItem('test-expenses') || '[]');
+      renderExpenses(expenses);
+      setTodayDate();
+    }
+
+    function formatDate(dateString) {
+      if (!dateString) return '';
+      const expenseDate = new Date(dateString);
+      const today = new Date();
+      const yesterday = new Date(today);
+      yesterday.setDate(yesterday.getDate() - 1);
+      
+      if (expenseDate.toDateString() === today.toDateString()) {
+        return 'Today';
+      } else if (expenseDate.toDateString() === yesterday.toDateString()) {
+        return 'Yesterday';
+      } else {
+        return expenseDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+      }
+    }
+
+    function renderExpenses(expenses) {
+      expenseList.innerHTML = '';
+      let total = 0;
+      expenses.forEach((exp, idx) => {
+        total += parseFloat(exp.amount);
+        const dateDisplay = exp.date ? ` (${formatDate(exp.date)})` : '';
+        const categoryDisplay = exp.category ? `[${exp.category}] ` : '';
+        const li = document.createElement('li');
+        li.innerHTML = `
+          <span>${categoryDisplay}${exp.desc} - ₹${parseFloat(exp.amount).toFixed(2)}${dateDisplay}</span>
+          <button onclick="removeExpense(${idx})" style="background:#dc3545;color:#fff;border:none;padding:4px 8px;border-radius:3px;cursor:pointer;">Delete</button>
+        `;
+        expenseList.appendChild(li);
+      });
+      totalSpan.textContent = total.toFixed(2);
+    }
+
+    expenseForm.addEventListener('submit', function(e) {
+      e.preventDefault();
+      
+      if (!validateExpenseForm()) {
+        return;
+      }
+      
+      const desc = document.getElementById('desc').value.trim();
+      const amount = document.getElementById('amount').value;
+      const date = document.getElementById('expense-date').value;
+      const category = document.getElementById('category').value;
+      let expenses = JSON.parse(localStorage.getItem('test-expenses') || '[]');
+      expenses.push({ desc, amount, date, category });
+      localStorage.setItem('test-expenses', JSON.stringify(expenses));
+      renderExpenses(expenses);
+      expenseForm.reset();
+      setTodayDate();
+      clearValidationErrors();
+    });
+
+    window.removeExpense = function(idx) {
+      let expenses = JSON.parse(localStorage.getItem('test-expenses') || '[]');
+      expenses.splice(idx, 1);
+      localStorage.setItem('test-expenses', JSON.stringify(expenses));
+      renderExpenses(expenses);
+    };
+
+    // Test Functions
+    function wait(ms) {
+      return new Promise(resolve => setTimeout(resolve, ms));
+    }
+
+    function addTestResult(testName, passed, message = '') {
+      testResults.push({ testName, passed, message });
+      const resultsDiv = document.getElementById('test-results');
+      const resultDiv = document.createElement('div');
+      resultDiv.className = `test-result ${passed ? 'pass' : 'fail'}`;
+      resultDiv.innerHTML = `
+        <strong>${passed ? '✓' : '✗'} ${testName}</strong>
+        ${message ? `<br><em>${message}</em>` : ''}
+      `;
+      resultsDiv.appendChild(resultDiv);
+      console.log(`${passed ? '✓' : '✗'} ${testName}${message ? ': ' + message : ''}`);
+    }
+
+    function updateTestSummary() {
+      const passed = testResults.filter(r => r.passed).length;
+      const total = testResults.length;
+      const summaryDiv = document.getElementById('test-summary');
+      summaryDiv.className = `test-summary ${passed === total ? 'pass' : 'fail'}`;
+      summaryDiv.innerHTML = `
+        <strong>Test Summary: ${passed}/${total} tests passed</strong>
+        ${passed === total ? '🎉 All tests passed!' : '❌ Some tests failed'}
+      `;
+    }
+
+    async function testLogin() {
+      try {
+        // Ensure we start from logged out state
+        if (appContainer.style.display !== 'none') {
+          document.getElementById('logout-btn').click();
+          await wait(100);
+        }
+        
+        const usernameField = document.getElementById('username');
+        const passwordField = document.getElementById('password');
+        const loginButton = document.querySelector('#login-form button[type="submit"]');
+        
+        // Test valid login
+        usernameField.value = 'user';
+        passwordField.value = 'pass';
+        loginButton.click();
+        
+        await wait(100);
+        
+        if (appContainer.style.display !== 'none' && loginContainer.style.display === 'none') {
+          addTestResult('Valid login works', true);
+        } else {
+          addTestResult('Valid login works', false, 'App container not shown after login');
+        }
+      } catch (error) {
+        addTestResult('Valid login works', false, error.message);
+      }
+    }
+
+    async function testInvalidLogin() {
+      try {
+        // Logout first
+        if (appContainer.style.display !== 'none') {
+          document.getElementById('logout-btn').click();
+          await wait(100);
+        }
+        
+        const usernameField = document.getElementById('username');
+        const passwordField = document.getElementById('password');
+        const loginButton = document.querySelector('#login-form button[type="submit"]');
+        
+        // Test invalid login
+        usernameField.value = 'wrong';
+        passwordField.value = 'wrong';
+        loginButton.click();
+        
+        await wait(100);
+        
+        const loginErrorElement = document.getElementById('login-error');
+        if (loginErrorElement.style.display !== 'none') {
+          addTestResult('Invalid login shows error', true);
+        } else {
+          addTestResult('Invalid login shows error', false, 'Error message not displayed');
+        }
+        
+        // Login back for other tests
+        usernameField.value = 'user';
+        passwordField.value = 'pass';
+        loginButton.click();
+        await wait(100);
+      } catch (error) {
+        addTestResult('Invalid login shows error', false, error.message);
+      }
+    }
+
+    async function testFormValidation() {
+      try {
+        const submitButton = document.querySelector('#expense-form button[type="submit"]');
+        
+        // Clear form first
+        document.getElementById('desc').value = '';
+        document.getElementById('category').value = '';
+        document.getElementById('amount').value = '';
+        
+        // Test empty form submission
+        submitButton.click();
+        await wait(100);
+        
+        const descError = document.getElementById('desc-error');
+        const categoryError = document.getElementById('category-error');
+        const amountError = document.getElementById('amount-error');
+        
+        if (descError.style.display !== 'none' && 
+            categoryError.style.display !== 'none' && 
+            amountError.style.display !== 'none') {
+          addTestResult('Form validation works', true);
+        } else {
+          addTestResult('Form validation works', false, 'Not all validation errors shown');
+        }
+      } catch (error) {
+        addTestResult('Form validation works', false, error.message);
+      }
+    }
+
+    async function testExpenseEntry() {
+      try {
+        // Fill form with valid data
+        document.getElementById('desc').value = 'Test Coffee';
+        document.getElementById('category').value = 'Food';
+        document.getElementById('amount').value = '4.50';
+        
+        const submitButton = document.querySelector('#expense-form button[type="submit"]');
+        submitButton.click();
+        
+        await wait(200);
+        
+        // Check if expense appears in list
+        const expenses = expenseList.querySelectorAll('li');
+        
+        let foundExpense = false;
+        expenses.forEach(li => {
+          if (li.textContent.includes('Test Coffee') && li.textContent.includes('4.50')) {
+            foundExpense = true;
+          }
+        });
+        
+        if (foundExpense) {
+          addTestResult('Expense entry works', true);
+        } else {
+          addTestResult('Expense entry works', false, 'Expense not found in list');
+        }
+        
+        // Check total calculation
+        const total = parseFloat(totalSpan.textContent);
+        if (total >= 4.50) {
+          addTestResult('Total calculation works', true);
+        } else {
+          addTestResult('Total calculation works', false, `Expected >= 4.50, got ${total}`);
+        }
+      } catch (error) {
+        addTestResult('Expense entry works', false, error.message);
+      }
+    }
+
+    async function testCategoryDisplay() {
+      try {
+        // Add expense with category
+        document.getElementById('desc').value = 'Test Transport';
+        document.getElementById('category').value = 'Transport';
+        document.getElementById('amount').value = '15.00';
+        
+        const submitButton = document.querySelector('#expense-form button[type="submit"]');
+        submitButton.click();
+        
+        await wait(200);
+        
+        const expenses = expenseList.querySelectorAll('li');
+        
+        let foundCategoryDisplay = false;
+        expenses.forEach(li => {
+          if (li.textContent.includes('[Transport]') && li.textContent.includes('Test Transport')) {
+            foundCategoryDisplay = true;
+          }
+        });
+        
+        if (foundCategoryDisplay) {
+          addTestResult('Category display works', true);
+        } else {
+          addTestResult('Category display works', false, 'Category not shown in brackets');
+        }
+      } catch (error) {
+        addTestResult('Category display works', false, error.message);
+      }
+    }
+
+    function clearTestData() {
+      try {
+        localStorage.removeItem('test-expenses');
+        loadExpenses();
+        addTestResult('Clear test data', true);
+      } catch (error) {
+        addTestResult('Clear test data', false, error.message);
+      }
+    }
+
+    async function runAllTests() {
+      console.log('Starting integration tests...');
+      testResults = [];
+      document.getElementById('test-results').innerHTML = '';
+      document.getElementById('test-summary').innerHTML = '';
+      
+      await testLogin();
+      await testInvalidLogin();
+      await testFormValidation();
+      await testExpenseEntry();
+      await testCategoryDisplay();
+      
+      updateTestSummary();
+      console.log('Tests completed!');
+    }
+  </script>
+</body>
+</html>
