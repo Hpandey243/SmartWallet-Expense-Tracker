@@ -1,0 +1,503 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Expense Tracker App</title>
+<style>
+* { box-sizing: border-box; }
+body { 
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; 
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  margin: 0; 
+  padding: 20px;
+  min-height: 100vh;
+}
+.container { 
+  max-width: 480px; 
+  margin: 20px auto; 
+  background: #fff; 
+  padding: 32px; 
+  border-radius: 16px; 
+  box-shadow: 0 10px 40px rgba(0,0,0,0.2);
+  animation: slideIn 0.4s ease-out;
+}
+@keyframes slideIn {
+  from { opacity: 0; transform: translateY(-20px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+h2 { 
+  text-align: center; 
+  color: #2d3748;
+  margin: 0 0 24px 0;
+  font-size: 28px;
+  font-weight: 600;
+}
+h3 { 
+  text-align: center; 
+  color: #4a5568;
+  margin: 32px 0 16px 0;
+  font-size: 20px;
+  font-weight: 600;
+  border-bottom: 2px solid #e2e8f0;
+  padding-bottom: 8px;
+}
+form { margin-bottom: 24px; }
+label { 
+  display: block; 
+  color: #4a5568; 
+  font-size: 14px; 
+  font-weight: 500; 
+  margin-bottom: 6px;
+}
+input[type="text"], input[type="number"], input[type="password"], input[type="date"], select {
+  width: 100%; 
+  padding: 12px 16px; 
+  margin: 0 0 16px 0; 
+  border: 2px solid #e2e8f0; 
+  border-radius: 8px;
+  font-size: 15px;
+  transition: all 0.3s ease;
+  background: #f7fafc;
+}
+input:focus, select:focus {
+  outline: none;
+  border-color: #667eea;
+  background: #fff;
+  box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+}
+.error { 
+  color: #e53e3e; 
+  font-size: 13px; 
+  margin-top: -12px; 
+  margin-bottom: 12px; 
+  display: none;
+  font-weight: 500;
+}
+.invalid { 
+  border-color: #e53e3e !important; 
+  background: #fff5f5 !important;
+}
+button { 
+  width: 100%; 
+  padding: 14px; 
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: #fff; 
+  border: none; 
+  border-radius: 8px; 
+  cursor: pointer;
+  font-size: 16px;
+  font-weight: 600;
+  transition: all 0.3s ease;
+  box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+}
+button:hover { 
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(102, 126, 234, 0.5);
+}
+button:active {
+  transform: translateY(0);
+}
+ul { list-style: none; padding: 0; margin: 0; }
+li { 
+  background: linear-gradient(135deg, #f7fafc 0%, #edf2f7 100%);
+  margin: 10px 0; 
+  padding: 16px; 
+  border-radius: 10px; 
+  display: flex; 
+  justify-content: space-between; 
+  align-items: center;
+  border-left: 4px solid #667eea;
+  transition: all 0.3s ease;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+}
+li:hover {
+  transform: translateX(4px);
+  box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+}
+li span {
+  color: #2d3748;
+  font-size: 14px;
+  line-height: 1.5;
+}
+li button {
+  width: auto;
+  padding: 8px 16px;
+  background: linear-gradient(135deg, #fc8181 0%, #e53e3e 100%);
+  font-size: 13px;
+  box-shadow: 0 2px 8px rgba(229, 62, 62, 0.3);
+}
+li button:hover {
+  box-shadow: 0 4px 12px rgba(229, 62, 62, 0.4);
+}
+.total { 
+  font-weight: 700; 
+  margin-top: 20px;
+  padding: 20px;
+  background: linear-gradient(135deg, #48bb78 0%, #38a169 100%);
+  color: white;
+  border-radius: 10px;
+  text-align: center;
+  font-size: 24px;
+  box-shadow: 0 4px 12px rgba(72, 187, 120, 0.3);
+}
+.logout { 
+  background: linear-gradient(135deg, #fc8181 0%, #e53e3e 100%);
+  margin-top: 16px;
+  box-shadow: 0 4px 12px rgba(229, 62, 62, 0.3);
+}
+canvas { 
+  margin-top: 20px; 
+  width: 100% !important; 
+  height: auto !important;
+  border-radius: 10px;
+  background: #f7fafc;
+  padding: 16px;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+}
+#goal-status { 
+  margin-top: 16px;
+  padding: 16px;
+  background: #f7fafc;
+  border-radius: 10px;
+  color: #2d3748;
+  font-size: 14px;
+  line-height: 1.8;
+}
+#goal-status div { margin-top: 8px; }
+#export-csv, #export-json {
+  margin-top: 12px;
+  background: linear-gradient(135deg, #4299e1 0%, #3182ce 100%);
+  box-shadow: 0 4px 12px rgba(66, 153, 225, 0.3);
+}
+#save-goal {
+  margin-top: 12px;
+  background: linear-gradient(135deg, #48bb78 0%, #38a169 100%);
+  box-shadow: 0 4px 12px rgba(72, 187, 120, 0.3);
+}
+#login-error {
+  color: #e53e3e;
+  background: #fff5f5;
+  padding: 12px;
+  border-radius: 8px;
+  margin-top: 16px;
+  text-align: center;
+  font-weight: 500;
+  border: 1px solid #feb2b2;
+}
+.category-badge {
+  display: inline-block;
+  padding: 4px 10px;
+  border-radius: 12px;
+  font-size: 11px;
+  font-weight: 600;
+  margin-right: 8px;
+  text-transform: uppercase;
+}
+</style>
+</head>
+<body>
+<!-- Login -->
+<div class="container" id="login-container">
+<h2>Login</h2>
+<form id="login-form">
+<input type="text" id="username" placeholder="Username" required />
+<input type="password" id="password" placeholder="Password" required />
+<button type="submit">Login</button>
+</form>
+<div id="login-error" style="color: red; display: none;">Invalid credentials.</div>
+</div>
+
+<!-- App -->
+<div class="container" id="app-container" style="display: none;">
+<h2>Expense Tracker</h2>
+<form id="expense-form">
+<input type="text" id="desc" placeholder="Expense Description *" required />
+<div class="error" id="desc-error">Please enter a description (minimum 2 characters)</div>
+<select id="category" required>
+<option value="">Select Category *</option>
+<option value="Food">Food & Dining</option>
+<option value="Transport">Transportation</option>
+<option value="Shopping">Shopping</option>
+<option value="Bills">Bills & Utilities</option>
+<option value="Entertainment">Entertainment</option>
+<option value="Health">Healthcare</option>
+<option value="Other">Other</option>
+</select>
+<div class="error" id="category-error">Please select a category</div>
+<input type="number" id="amount" placeholder="Amount *" min="0.01" step="0.01" required />
+<div class="error" id="amount-error">Please enter a valid amount (minimum ₹0.01)</div>
+<input type="date" id="expense-date" required />
+<div class="error" id="date-error">Please select a valid date</div>
+<button type="submit">Add Expense</button>
+</form>
+<ul id="expense-list"></ul>
+<div class="total">Total: ₹<span id="total">0.00</span></div>
+
+<!-- Charts -->
+<h3>Visual Summary</h3>
+<canvas id="categoryChart"></canvas>
+<canvas id="trendChart"></canvas>
+
+<!-- Savings Goal -->
+<h3>Savings Goal</h3>
+<input type="number" id="goal-amount" placeholder="Set goal amount (₹)" min="0" step="0.01">
+<button id="save-goal">Set Goal</button>
+<div id="goal-status"></div>
+
+<!-- Export buttons -->
+<button id="export-csv">Export as CSV</button>
+<button id="export-json">Export as JSON</button>
+<button class="logout" id="logout-btn">Logout</button>
+</div>
+
+<!-- Chart.js -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+// Demo credentials
+const DEMO_USER = { username: "user", password: "pass" };
+
+// ===== LOGIN =====
+const loginForm = document.getElementById('login-form');
+const loginContainer = document.getElementById('login-container');
+const appContainer = document.getElementById('app-container');
+const loginError = document.getElementById('login-error');
+
+loginForm.addEventListener('submit', e => {
+e.preventDefault();
+const username = document.getElementById('username').value;
+const password = document.getElementById('password').value;
+if (username === DEMO_USER.username && password === DEMO_USER.password) {
+loginContainer.style.display = 'none';
+appContainer.style.display = 'block';
+loginError.style.display = 'none';
+loadExpenses();
+} else {
+loginError.style.display = 'block';
+}
+});
+
+document.getElementById('logout-btn').onclick = () => {
+appContainer.style.display = 'none';
+loginContainer.style.display = 'block';
+loginForm.reset();
+};
+
+// ===== EXPENSE LOGIC =====
+const expenseForm = document.getElementById('expense-form');
+const expenseList = document.getElementById('expense-list');
+const totalSpan = document.getElementById('total');
+let categoryChart, trendChart;
+
+function setTodayDate() {
+const today = new Date().toISOString().split('T')[0];
+document.getElementById('expense-date').value = today;
+}
+
+function clearValidationErrors() {
+['desc', 'category', 'amount', 'expense-date'].forEach(field => {
+document.getElementById(field).classList.remove('invalid');
+const errorId = field === 'expense-date' ? 'date-error' : `${field}-error`;
+document.getElementById(errorId).style.display = 'none';
+});
+}
+
+function showValidationError(fieldId, show = true) {
+const field = document.getElementById(fieldId);
+const errorId = fieldId === 'expense-date' ? 'date-error' : `${fieldId}-error`;
+const error = document.getElementById(errorId);
+if (show) { field.classList.add('invalid'); error.style.display = 'block'; }
+else { field.classList.remove('invalid'); error.style.display = 'none'; }
+}
+
+function validateExpenseForm() {
+clearValidationErrors();
+const desc = document.getElementById('desc').value.trim();
+const category = document.getElementById('category').value;
+const amount = parseFloat(document.getElementById('amount').value);
+const date = document.getElementById('expense-date').value;
+let valid = true;
+if (!desc || desc.length < 2) { showValidationError('desc'); valid = false; }
+if (!category) { showValidationError('category'); valid = false; }
+if (!amount || amount <= 0) { showValidationError('amount'); valid = false; }
+if (!date) { showValidationError('expense-date'); valid = false; }
+else {
+const d = new Date(date), now = new Date(), yearAgo = new Date();
+yearAgo.setFullYear(now.getFullYear() - 1);
+if (d > now || d < yearAgo) {
+document.getElementById('date-error').textContent = 'Date must be within past year';
+showValidationError('expense-date'); valid = false;
+}
+}
+return valid;
+}
+
+function loadExpenses() {
+const expenses = JSON.parse(localStorage.getItem('expenses') || '[]');
+renderExpenses(expenses);
+setTodayDate();
+}
+
+function formatDate(dateString) {
+if (!dateString) return '';
+const d = new Date(dateString);
+const t = new Date();
+const y = new Date(); y.setDate(y.getDate() - 1);
+if (d.toDateString() === t.toDateString()) return 'Today';
+if (d.toDateString() === y.toDateString()) return 'Yesterday';
+return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+}
+
+function getCategoryColor(category) {
+const colors = {
+'Food': '#fbbf24',
+'Transport': '#60a5fa',
+'Shopping': '#f472b6',
+'Bills': '#a78bfa',
+'Entertainment': '#34d399',
+'Health': '#fb7185',
+'Other': '#94a3b8'
+};
+return colors[category] || '#94a3b8';
+}
+
+function renderExpenses(expenses) {
+expenseList.innerHTML = '';
+let total = 0;
+expenses.forEach((exp, i) => {
+total += parseFloat(exp.amount);
+const li = document.createElement('li');
+const categoryColor = getCategoryColor(exp.category);
+li.innerHTML = `
+<div style="flex: 1;">
+<span class="category-badge" style="background: ${categoryColor}; color: #fff;">${exp.category}</span>
+<div style="margin-top: 4px; font-weight: 600; color: #2d3748;">${exp.desc}</div>
+<div style="font-size: 12px; color: #718096; margin-top: 2px;">${formatDate(exp.date)}</div>
+</div>
+<div style="text-align: right; display: flex; align-items: center; gap: 12px;">
+<span style="font-size: 18px; font-weight: 700; color: #2d3748;">₹${parseFloat(exp.amount).toFixed(2)}</span>
+<button onclick="removeExpense(${i})" style="width: auto; padding: 8px 12px; font-size: 12px;">✕</button>
+</div>
+`;
+expenseList.appendChild(li);
+});
+totalSpan.textContent = total.toFixed(2);
+updateCharts(expenses);
+showGoalStatus();
+}
+
+expenseForm.addEventListener('submit', e => {
+e.preventDefault();
+if (!validateExpenseForm()) return;
+const desc = document.getElementById('desc').value.trim();
+const amount = document.getElementById('amount').value;
+const date = document.getElementById('expense-date').value;
+const category = document.getElementById('category').value;
+let expenses = JSON.parse(localStorage.getItem('expenses') || '[]');
+expenses.push({ desc, amount, date, category });
+localStorage.setItem('expenses', JSON.stringify(expenses));
+renderExpenses(expenses);
+expenseForm.reset();
+setTodayDate();
+clearValidationErrors();
+});
+
+window.removeExpense = i => {
+let expenses = JSON.parse(localStorage.getItem('expenses') || '[]');
+expenses.splice(i, 1);
+localStorage.setItem('expenses', JSON.stringify(expenses));
+renderExpenses(expenses);
+};
+
+// ===== CHARTS =====
+function updateCharts(expenses) {
+const categoryData = {}, dailyData = {};
+expenses.forEach(e => {
+categoryData[e.category] = (categoryData[e.category] || 0) + parseFloat(e.amount);
+dailyData[e.date] = (dailyData[e.date] || 0) + parseFloat(e.amount);
+});
+if (categoryChart) categoryChart.destroy();
+if (trendChart) trendChart.destroy();
+const ctx1 = document.getElementById('categoryChart').getContext('2d');
+const ctx2 = document.getElementById('trendChart').getContext('2d');
+categoryChart = new Chart(ctx1, {
+type: 'pie',
+data: { labels: Object.keys(categoryData), datasets: [{ data: Object.values(categoryData),
+backgroundColor: ['#007bff','#28a745','#ffc107','#dc3545','#17a2b8','#6f42c1','#fd7e14'] }] },
+});
+trendChart = new Chart(ctx2, {
+type: 'line',
+data: { labels: Object.keys(dailyData).sort(),
+datasets: [{ label: 'Spending Trend', data: Object.keys(dailyData).sort().map(k=>dailyData[k]),
+borderColor:'#007bff', fill:false }] },
+options: { scales: { y: { beginAtZero:true } } }
+});
+}
+
+// ===== SAVINGS GOAL =====
+const goalInput = document.getElementById('goal-amount');
+const saveGoalBtn = document.getElementById('save-goal');
+const goalStatus = document.getElementById('goal-status');
+
+saveGoalBtn.addEventListener('click', () => {
+const g = parseFloat(goalInput.value);
+if (g > 0) { localStorage.setItem('savingsGoal', g); showGoalStatus(); }
+else goalStatus.textContent = 'Enter a valid goal amount';
+});
+
+function showGoalStatus() {
+const goal = parseFloat(localStorage.getItem('savingsGoal') || 0);
+const expenses = JSON.parse(localStorage.getItem('expenses') || '[]');
+const total = expenses.reduce((sum,e)=>sum+parseFloat(e.amount),0);
+if (goal > 0) {
+const spentPercent = Math.min((total/goal)*100, 100);
+const remaining = goal - total;
+const statusColor = spentPercent > 90 ? '#e53e3e' : spentPercent > 70 ? '#ed8936' : '#48bb78';
+goalStatus.innerHTML = `
+<div style="display: flex; justify-content: space-between; margin-bottom: 12px;">
+<div>
+<div style="font-size: 12px; color: #718096; text-transform: uppercase; font-weight: 600;">Goal</div>
+<div style="font-size: 20px; font-weight: 700; color: #2d3748;">₹${goal.toFixed(2)}</div>
+</div>
+<div style="text-align: right;">
+<div style="font-size: 12px; color: #718096; text-transform: uppercase; font-weight: 600;">Spent</div>
+<div style="font-size: 20px; font-weight: 700; color: ${statusColor};">₹${total.toFixed(2)}</div>
+</div>
+</div>
+<div style="height: 12px; background: #e2e8f0; border-radius: 6px; overflow: hidden; margin-bottom: 8px;">
+<div style="width: ${spentPercent}%; height: 100%; background: ${statusColor}; transition: width 0.5s ease;"></div>
+</div>
+<div style="text-align: center; font-size: 13px; color: #4a5568;">
+<strong>${spentPercent.toFixed(1)}%</strong> used • <strong>₹${remaining.toFixed(2)}</strong> remaining
+</div>
+`;
+} else {
+goalStatus.innerHTML = '<div style="text-align: center; color: #718096; padding: 20px;">No savings goal set yet</div>';
+}
+}
+
+// ===== EXPORT =====
+document.getElementById('export-csv').addEventListener('click', exportCSV);
+document.getElementById('export-json').addEventListener('click', exportJSON);
+
+function exportCSV() {
+const expenses = JSON.parse(localStorage.getItem('expenses') || '[]');
+if (!expenses.length) return alert('No data to export');
+const csv = [['Description','Category','Amount','Date'],...expenses.map(e=>[e.desc,e.category,e.amount,e.date])].map(r=>r.join(',')).join('\n');
+const blob = new Blob([csv],{type:'text/csv'});
+const a = document.createElement('a');
+a.href = URL.createObjectURL(blob);
+a.download = 'expenses.csv';
+a.click();
+}
+
+function exportJSON() {
+const expenses = localStorage.getItem('expenses') || '[]';
+const blob = new Blob([expenses],{type:'application/json'});
+const a = document.createElement('a');
+a.href = URL.createObjectURL(blob);
+a.download = 'expenses.json';
+a.click();
+}
+</script>
+</body>
+</html>
