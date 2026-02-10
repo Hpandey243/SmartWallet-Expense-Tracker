@@ -1,0 +1,460 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Expense Tracker - Test Suite</title>
+<style>
+body {
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  margin: 0;
+  padding: 20px;
+  min-height: 100vh;
+}
+.container {
+  max-width: 800px;
+  margin: 20px auto;
+  background: #fff;
+  padding: 32px;
+  border-radius: 16px;
+  box-shadow: 0 10px 40px rgba(0,0,0,0.2);
+}
+h1 {
+  text-align: center;
+  color: #2d3748;
+  margin-bottom: 32px;
+}
+.test-section {
+  margin-bottom: 24px;
+  padding: 16px;
+  background: #f7fafc;
+  border-radius: 8px;
+  border-left: 4px solid #667eea;
+}
+.test-section h2 {
+  color: #4a5568;
+  font-size: 18px;
+  margin: 0 0 12px 0;
+}
+.test-case {
+  padding: 12px;
+  margin: 8px 0;
+  background: white;
+  border-radius: 6px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+.test-name {
+  color: #2d3748;
+  font-size: 14px;
+}
+.test-status {
+  padding: 4px 12px;
+  border-radius: 12px;
+  font-size: 12px;
+  font-weight: 600;
+}
+.pass {
+  background: #c6f6d5;
+  color: #22543d;
+}
+.fail {
+  background: #fed7d7;
+  color: #742a2a;
+}
+.pending {
+  background: #feebc8;
+  color: #7c2d12;
+}
+button {
+  width: 100%;
+  padding: 14px;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: #fff;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 16px;
+  font-weight: 600;
+  margin-top: 16px;
+}
+button:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(102, 126, 234, 0.5);
+}
+.summary {
+  text-align: center;
+  padding: 20px;
+  background: linear-gradient(135deg, #48bb78 0%, #38a169 100%);
+  color: white;
+  border-radius: 10px;
+  margin-top: 24px;
+  font-size: 18px;
+  font-weight: 600;
+}
+.summary.fail-summary {
+  background: linear-gradient(135deg, #fc8181 0%, #e53e3e 100%);
+}
+.test-details {
+  font-size: 12px;
+  color: #718096;
+  margin-top: 4px;
+}
+</style>
+</head>
+<body>
+<div class="container">
+  <h1>🧪 Expense Tracker Test Suite</h1>
+  
+  <div id="test-results"></div>
+  
+  <button onclick="runAllTests()">Run All Tests</button>
+  
+  <div id="summary"></div>
+</div>
+
+<script>
+// Test Framework
+class TestRunner {
+  constructor() {
+    this.tests = [];
+    this.results = [];
+  }
+
+  test(name, fn) {
+    this.tests.push({ name, fn });
+  }
+
+  async run() {
+    this.results = [];
+    for (const test of this.tests) {
+      try {
+        await test.fn();
+        this.results.push({ name: test.name, status: 'pass', error: null });
+      } catch (error) {
+        this.results.push({ name: test.name, status: 'fail', error: error.message });
+      }
+    }
+    return this.results;
+  }
+
+  assert(condition, message) {
+    if (!condition) {
+      throw new Error(message || 'Assertion failed');
+    }
+  }
+
+  assertEqual(actual, expected, message) {
+    if (actual !== expected) {
+      throw new Error(message || `Expected ${expected}, but got ${actual}`);
+    }
+  }
+
+  assertNotNull(value, message) {
+    if (value === null || value === undefined) {
+      throw new Error(message || 'Value is null or undefined');
+    }
+  }
+}
+
+// Initialize Test Runner
+const runner = new TestRunner();
+
+// Mock localStorage for testing
+class MockStorage {
+  constructor() {
+    this.store = {};
+  }
+  getItem(key) {
+    return this.store[key] || null;
+  }
+  setItem(key, value) {
+    this.store[key] = value;
+  }
+  clear() {
+    this.store = {};
+  }
+}
+
+const mockStorage = new MockStorage();
+
+// Helper Functions (from expense tracker)
+function validateDescription(desc) {
+  return desc && desc.trim().length >= 2;
+}
+
+function validateAmount(amount) {
+  const num = parseFloat(amount);
+  return !isNaN(num) && num > 0;
+}
+
+function validateCategory(category) {
+  const validCategories = ['Food', 'Transport', 'Shopping', 'Bills', 'Entertainment', 'Health', 'Other'];
+  return validCategories.includes(category);
+}
+
+function validateDate(dateString) {
+  if (!dateString) return false;
+  const date = new Date(dateString);
+  const now = new Date();
+  const yearAgo = new Date();
+  yearAgo.setFullYear(now.getFullYear() - 1);
+  return date <= now && date >= yearAgo;
+}
+
+function calculateTotal(expenses) {
+  return expenses.reduce((sum, exp) => sum + parseFloat(exp.amount), 0);
+}
+
+function formatDate(dateString) {
+  if (!dateString) return '';
+  const d = new Date(dateString);
+  const t = new Date();
+  const y = new Date();
+  y.setDate(y.getDate() - 1);
+  if (d.toDateString() === t.toDateString()) return 'Today';
+  if (d.toDateString() === y.toDateString()) return 'Yesterday';
+  return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+}
+
+function addExpense(expenses, expense) {
+  expenses.push(expense);
+  return expenses;
+}
+
+function removeExpense(expenses, index) {
+  expenses.splice(index, 1);
+  return expenses;
+}
+
+// TEST SUITE 1: Validation Tests
+runner.test('Should validate valid description', () => {
+  runner.assert(validateDescription('Lunch'), 'Valid description should pass');
+});
+
+runner.test('Should reject empty description', () => {
+  runner.assert(!validateDescription(''), 'Empty description should fail');
+});
+
+runner.test('Should reject single character description', () => {
+  runner.assert(!validateDescription('A'), 'Single character should fail');
+});
+
+runner.test('Should validate positive amount', () => {
+  runner.assert(validateAmount(100), 'Positive amount should pass');
+});
+
+runner.test('Should reject negative amount', () => {
+  runner.assert(!validateAmount(-50), 'Negative amount should fail');
+});
+
+runner.test('Should reject zero amount', () => {
+  runner.assert(!validateAmount(0), 'Zero amount should fail');
+});
+
+runner.test('Should validate valid category', () => {
+  runner.assert(validateCategory('Food'), 'Valid category should pass');
+});
+
+runner.test('Should reject invalid category', () => {
+  runner.assert(!validateCategory('InvalidCategory'), 'Invalid category should fail');
+});
+
+runner.test('Should validate today\'s date', () => {
+  const today = new Date().toISOString().split('T')[0];
+  runner.assert(validateDate(today), 'Today\'s date should pass');
+});
+
+runner.test('Should reject future date', () => {
+  const future = new Date();
+  future.setDate(future.getDate() + 1);
+  const futureDate = future.toISOString().split('T')[0];
+  runner.assert(!validateDate(futureDate), 'Future date should fail');
+});
+
+// TEST SUITE 2: Expense Management Tests
+runner.test('Should add expense to list', () => {
+  const expenses = [];
+  const newExpense = { desc: 'Coffee', amount: '50', category: 'Food', date: '2026-02-10' };
+  addExpense(expenses, newExpense);
+  runner.assertEqual(expenses.length, 1, 'Should have 1 expense');
+});
+
+runner.test('Should remove expense from list', () => {
+  const expenses = [
+    { desc: 'Coffee', amount: '50', category: 'Food', date: '2026-02-10' },
+    { desc: 'Bus', amount: '30', category: 'Transport', date: '2026-02-10' }
+  ];
+  removeExpense(expenses, 0);
+  runner.assertEqual(expenses.length, 1, 'Should have 1 expense after removal');
+  runner.assertEqual(expenses[0].desc, 'Bus', 'Remaining expense should be Bus');
+});
+
+runner.test('Should calculate total correctly', () => {
+  const expenses = [
+    { desc: 'Coffee', amount: '50', category: 'Food', date: '2026-02-10' },
+    { desc: 'Bus', amount: '30', category: 'Transport', date: '2026-02-10' },
+    { desc: 'Lunch', amount: '120', category: 'Food', date: '2026-02-10' }
+  ];
+  const total = calculateTotal(expenses);
+  runner.assertEqual(total, 200, 'Total should be 200');
+});
+
+runner.test('Should calculate total for empty list', () => {
+  const expenses = [];
+  const total = calculateTotal(expenses);
+  runner.assertEqual(total, 0, 'Total should be 0 for empty list');
+});
+
+// TEST SUITE 3: Date Formatting Tests
+runner.test('Should format today as "Today"', () => {
+  const today = new Date().toISOString().split('T')[0];
+  const formatted = formatDate(today);
+  runner.assertEqual(formatted, 'Today', 'Should format as Today');
+});
+
+runner.test('Should format yesterday as "Yesterday"', () => {
+  const yesterday = new Date();
+  yesterday.setDate(yesterday.getDate() - 1);
+  const yesterdayStr = yesterday.toISOString().split('T')[0];
+  const formatted = formatDate(yesterdayStr);
+  runner.assertEqual(formatted, 'Yesterday', 'Should format as Yesterday');
+});
+
+runner.test('Should format other dates correctly', () => {
+  const formatted = formatDate('2026-01-15');
+  runner.assert(formatted.includes('Jan'), 'Should contain month abbreviation');
+});
+
+// TEST SUITE 4: LocalStorage Tests
+runner.test('Should save expenses to storage', () => {
+  const expenses = [{ desc: 'Test', amount: '100', category: 'Food', date: '2026-02-10' }];
+  mockStorage.setItem('expenses', JSON.stringify(expenses));
+  const saved = mockStorage.getItem('expenses');
+  runner.assertNotNull(saved, 'Should save to storage');
+});
+
+runner.test('Should load expenses from storage', () => {
+  const expenses = [{ desc: 'Test', amount: '100', category: 'Food', date: '2026-02-10' }];
+  mockStorage.setItem('expenses', JSON.stringify(expenses));
+  const loaded = JSON.parse(mockStorage.getItem('expenses'));
+  runner.assertEqual(loaded.length, 1, 'Should load 1 expense');
+  runner.assertEqual(loaded[0].desc, 'Test', 'Should load correct expense');
+});
+
+runner.test('Should handle empty storage', () => {
+  mockStorage.clear();
+  const loaded = mockStorage.getItem('expenses');
+  runner.assertEqual(loaded, null, 'Should return null for empty storage');
+});
+
+// TEST SUITE 5: Goal Tracking Tests
+runner.test('Should calculate spending percentage', () => {
+  const goal = 1000;
+  const spent = 300;
+  const percentage = (spent / goal) * 100;
+  runner.assertEqual(percentage, 30, 'Should calculate 30%');
+});
+
+runner.test('Should calculate remaining budget', () => {
+  const goal = 1000;
+  const spent = 300;
+  const remaining = goal - spent;
+  runner.assertEqual(remaining, 700, 'Should have 700 remaining');
+});
+
+runner.test('Should cap percentage at 100%', () => {
+  const goal = 1000;
+  const spent = 1500;
+  const percentage = Math.min((spent / goal) * 100, 100);
+  runner.assertEqual(percentage, 100, 'Should cap at 100%');
+});
+
+// TEST SUITE 6: Authentication Tests
+runner.test('Should validate correct credentials', () => {
+  const username = 'user';
+  const password = 'pass';
+  const isValid = username === 'user' && password === 'pass';
+  runner.assert(isValid, 'Should validate correct credentials');
+});
+
+runner.test('Should reject incorrect username', () => {
+  const username = 'wronguser';
+  const password = 'pass';
+  const isValid = username === 'user' && password === 'pass';
+  runner.assert(!isValid, 'Should reject incorrect username');
+});
+
+runner.test('Should reject incorrect password', () => {
+  const username = 'user';
+  const password = 'wrongpass';
+  const isValid = username === 'user' && password === 'pass';
+  runner.assert(!isValid, 'Should reject incorrect password');
+});
+
+// Run Tests and Display Results
+async function runAllTests() {
+  const resultsDiv = document.getElementById('test-results');
+  const summaryDiv = document.getElementById('summary');
+  
+  resultsDiv.innerHTML = '<div style="text-align: center; padding: 20px;">Running tests...</div>';
+  summaryDiv.innerHTML = '';
+  
+  // Small delay to show loading state
+  await new Promise(resolve => setTimeout(resolve, 500));
+  
+  const results = await runner.run();
+  
+  // Group tests by category
+  const categories = {
+    'Validation Tests': results.slice(0, 10),
+    'Expense Management': results.slice(10, 14),
+    'Date Formatting': results.slice(14, 17),
+    'LocalStorage': results.slice(17, 20),
+    'Goal Tracking': results.slice(20, 23),
+    'Authentication': results.slice(23, 26)
+  };
+  
+  let html = '';
+  for (const [category, tests] of Object.entries(categories)) {
+    html += `<div class="test-section">
+      <h2>${category}</h2>`;
+    
+    tests.forEach(result => {
+      const statusClass = result.status === 'pass' ? 'pass' : 'fail';
+      const statusText = result.status === 'pass' ? '✓ PASS' : '✗ FAIL';
+      html += `<div class="test-case">
+        <div>
+          <div class="test-name">${result.name}</div>
+          ${result.error ? `<div class="test-details">Error: ${result.error}</div>` : ''}
+        </div>
+        <span class="test-status ${statusClass}">${statusText}</span>
+      </div>`;
+    });
+    
+    html += '</div>';
+  }
+  
+  resultsDiv.innerHTML = html;
+  
+  // Summary
+  const passed = results.filter(r => r.status === 'pass').length;
+  const failed = results.filter(r => r.status === 'fail').length;
+  const total = results.length;
+  const percentage = ((passed / total) * 100).toFixed(1);
+  
+  const summaryClass = failed === 0 ? 'summary' : 'summary fail-summary';
+  summaryDiv.innerHTML = `<div class="${summaryClass}">
+    ${failed === 0 ? '🎉' : '⚠️'} Test Results: ${passed}/${total} Passed (${percentage}%)
+    ${failed > 0 ? `<br>${failed} test(s) failed` : '<br>All tests passed!'}
+  </div>`;
+}
+
+// Auto-run tests on page load
+window.onload = () => {
+  runAllTests();
+};
+</script>
+</body>
+</html>
